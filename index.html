@@ -3,23 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Felipe Canneli - LaChapelle Hyper-Pop (Orange & Green Edition)</title>
+    <title>Felipe Canneli - Sophisticated Surreal Studio</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body {
             margin: 0;
             padding: 0;
             overflow: hidden;
-            /* Degradê LaChapelle: Laranja Vibrante e Verde Ácido */
-            background: linear-gradient(45deg, #ff6600, #39ff14, #ffcc00);
-            background-size: 400% 400%;
-            animation: gradientBG 12s ease infinite;
-        }
-
-        @keyframes gradientBG {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+            background: #ff4500;
         }
 
         #bg-canvas {
@@ -31,31 +22,29 @@
             z-index: -1;
         }
 
-        /* Efeito de brilho "Glow" Surrealista */
-        .bloom-overlay {
+        /* Efeito de Bloom Sofisticado */
+        .glow-overlay {
             position: fixed;
             inset: 0;
             pointer-events: none;
-            background: radial-gradient(circle at center, rgba(255, 100, 0, 0.2) 0%, transparent 70%);
-            mix-blend-mode: screen;
+            background: radial-gradient(circle at center, transparent 30%, rgba(255, 69, 0, 0.2) 100%);
+            mix-blend-mode: soft-light;
             z-index: 2;
         }
 
-        /* Saturação extrema para o look LaChapelle */
-        .hyper-filter {
+        /* Camada de Saturação Y2K */
+        .hyper-juice {
             position: fixed;
             inset: 0;
             pointer-events: none;
-            backdrop-filter: saturate(2.2) contrast(1.3) brightness(1.1);
+            backdrop-filter: saturate(2.2) contrast(1.2) brightness(1.1);
             z-index: 5;
         }
 
-        .vhs-lines {
+        .studio-vignette {
             position: fixed;
             inset: 0;
-            background: linear-gradient(rgba(57, 255, 20, 0.05) 50%, transparent 50%);
-            background-size: 100% 4px;
-            opacity: 0.15;
+            background: radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.3) 100%);
             z-index: 6;
             pointer-events: none;
         }
@@ -64,184 +53,189 @@
 <body>
 
     <canvas id="bg-canvas"></canvas>
-    <div class="bloom-overlay"></div>
-    <div class="hyper-filter"></div>
-    <div class="vhs-lines"></div>
+    <div class="glow-overlay"></div>
+    <div class="hyper-juice"></div>
+    <div class="studio-vignette"></div>
 
     <script>
         let scene, camera, renderer, clock;
-        let grid, floor, particles;
-        const bubbles = [];
-        const chromeShapes = [];
+        const liquidSurfaces = [];
+        const backgroundProps = [];
+        let particles;
+        let originalVertices = [];
 
         function init() {
             scene = new THREE.Scene();
-            
-            // Fog colorida e saturada em vez de branca
-            scene.fog = new THREE.Fog(0xff6600, 5, 70);
+            scene.background = new THREE.Color(0xff4500);
+            scene.fog = new THREE.FogExp2(0xff4500, 0.01);
 
-            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 8, 25);
+            camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 15, 65);
 
             renderer = new THREE.WebGLRenderer({ 
                 canvas: document.getElementById('bg-canvas'), 
-                antialias: true,
-                alpha: true 
+                antialias: true 
             });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             
-            // Exposure alto para brilho de estúdio
-            renderer.toneMapping = THREE.ReinhardToneMapping;
-            renderer.toneMappingExposure = 2.8; 
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.3; 
 
             clock = new THREE.Clock();
 
-            // LUZES MULTICOLORIDAS (Laranja e Verde)
-            const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
+            // ILUMINAÇÃO DE ESTÚDIO FOTOGRÁFICO
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
             scene.add(ambientLight);
 
-            const orangeLight = new THREE.PointLight(0xff4400, 25, 100);
-            orangeLight.position.set(20, 20, 10);
-            scene.add(orangeLight);
+            const keyLight = new THREE.DirectionalLight(0xffffff, 1.3);
+            keyLight.position.set(10, 50, 20);
+            scene.add(keyLight);
 
-            const greenLight = new THREE.PointLight(0x39ff14, 25, 100);
-            greenLight.position.set(-20, 15, 10);
-            scene.add(greenLight);
+            const rimLight = new THREE.PointLight(0x39ff14, 20, 120);
+            rimLight.position.set(-40, 25, 10);
+            scene.add(rimLight);
 
-            const flashLight = new THREE.DirectionalLight(0xffffff, 1.5);
-            flashLight.position.set(0, 50, 20);
-            scene.add(flashLight);
+            const fillLight = new THREE.PointLight(0xffaa00, 15, 120);
+            fillLight.position.set(40, 10, 20);
+            scene.add(fillLight);
 
-            createFloor();
-            createSurrealObjects();
-            createBubbles();
+            createLiquidPlanes();
+            createHeroEntities();
+            createMinimalParticles();
 
             window.addEventListener('resize', onWindowResize);
             animate();
         }
 
-        function createFloor() {
-            // Grid Verde Neon
-            grid = new THREE.GridHelper(200, 40, 0x39ff14, 0x114400);
-            grid.position.y = -0.5;
-            scene.add(grid);
-
-            // Chão de Látex Verde Ácido
-            const floorGeo = new THREE.PlaneGeometry(500, 500);
-            const floorMat = new THREE.MeshStandardMaterial({
-                color: 0x39ff14,
-                metalness: 0.9,
-                roughness: 0.05,
-                emissive: 0x112200
-            });
-            floor = new THREE.Mesh(floorGeo, floorMat);
-            floor.rotation.x = -Math.PI / 2;
-            floor.position.y = -0.6;
-            scene.add(floor);
-        }
-
-        function createSurrealObjects() {
-            const geometries = [
-                new THREE.TorusKnotGeometry(3, 0.8, 200, 32),
-                new THREE.SphereGeometry(2, 64, 64),
-                new THREE.TorusGeometry(5, 0.4, 16, 100)
-            ];
-
-            // Materiais Chrome e Plástico Laranja
-            const chromeMat = new THREE.MeshStandardMaterial({
-                color: 0xffffff,
-                metalness: 1,
-                roughness: 0,
-                emissive: 0x221100
-            });
-
-            const orangePlasticMat = new THREE.MeshStandardMaterial({
-                color: 0xff6600,
-                metalness: 0.3,
-                roughness: 0,
-                emissive: 0x442200
-            });
-
-            for (let i = 0; i < 18; i++) {
-                const isChrome = Math.random() > 0.4;
-                const geo = geometries[Math.floor(Math.random() * geometries.length)];
-                const mesh = new THREE.Mesh(geo, isChrome ? chromeMat : orangePlasticMat);
-                
-                mesh.position.set(
-                    (Math.random() - 0.5) * 80,
-                    Math.random() * 25 + 5,
-                    (Math.random() - 0.5) * 60 - 30
-                );
-                
-                mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
-                mesh.scale.setScalar(1.2 + Math.random() * 3);
-                
-                scene.add(mesh);
-                chromeShapes.push({
-                    mesh: mesh,
-                    rot: (Math.random() - 0.5) * 0.02,
-                    float: 0.4 + Math.random()
-                });
-            }
-        }
-
-        function createBubbles() {
-            // Bolhas verdes e alaranjadas
-            const geo = new THREE.SphereGeometry(0.5, 32, 32);
+        function createLiquidPlanes() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 512;
+            const ctx = canvas.getContext('2d');
             
-            for(let i=0; i<70; i++) {
-                const isGreen = Math.random() > 0.5;
-                const mat = new THREE.MeshPhongMaterial({
-                    color: isGreen ? 0x39ff14 : 0xff9900,
-                    transparent: true,
-                    opacity: 0.5,
-                    shininess: 150
-                });
-                
-                const bubble = new THREE.Mesh(geo, mat);
-                bubble.position.set(
-                    (Math.random() - 0.5) * 100,
-                    Math.random() * 50,
-                    (Math.random() - 0.5) * 100
-                );
-                bubble.scale.setScalar(Math.random() * 2.5);
-                scene.add(bubble);
-                bubbles.push(bubble);
+            // Xadrez Nickelodeon: Verde Slime e Laranja
+            ctx.fillStyle = '#ff5500'; ctx.fillRect(0, 0, 512, 512);
+            ctx.fillStyle = '#39ff14'; ctx.fillRect(0, 0, 256, 256); ctx.fillRect(256, 256, 256, 256);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(12, 12);
+
+            const planeGeo = new THREE.PlaneGeometry(400, 400, 60, 60);
+            const planeMat = new THREE.MeshStandardMaterial({ 
+                map: texture, 
+                side: THREE.DoubleSide,
+                roughness: 0.1,
+                metalness: 0.3
+            });
+            
+            // Plano Inferior (Chão)
+            const floor = new THREE.Mesh(planeGeo, planeMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = -20;
+            scene.add(floor);
+            
+            // Plano Superior (Teto)
+            const ceiling = new THREE.Mesh(planeGeo, planeMat);
+            ceiling.rotation.x = Math.PI / 2;
+            ceiling.position.y = 50;
+            scene.add(ceiling);
+            
+            // Guardar vértices para animação
+            originalVertices = floor.geometry.attributes.position.array.slice();
+            
+            liquidSurfaces.push(floor, ceiling);
+        }
+
+        function createEmojiTexture(char) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256; canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.font = '180px Arial';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.shadowColor = 'rgba(0,0,0,0.5)';
+            ctx.shadowBlur = 20;
+            ctx.fillText(char, 128, 128);
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function createHeroEntities() {
+            // Unicórnios (Emoji Look)
+            const unicornTex = createEmojiTexture('🦄');
+            const unicornMat = new THREE.MeshBasicMaterial({ map: unicornTex, transparent: true, side: THREE.DoubleSide });
+            
+            for(let i=0; i<8; i++) {
+                const uni = new THREE.Mesh(new THREE.PlaneGeometry(14, 14), unicornMat);
+                uni.position.set(i % 2 === 0 ? -45 : 45, 10 + i*4, -30 - i*15);
+                scene.add(uni);
+                backgroundProps.push({ mesh: uni, type: 'sprite', floatSpeed: 0.4, posOffset: i });
             }
+
+            // Geometrias Wireframe Y2K
+            const wireMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.3 });
+            const starGeo = new THREE.IcosahedronGeometry(7, 0);
+            const triGeo = new THREE.ConeGeometry(5, 12, 3);
+
+            for(let i=0; i<12; i++) {
+                const shape = new THREE.Mesh(i % 2 === 0 ? starGeo : triGeo, wireMat);
+                shape.position.set((Math.random()-0.5)*130, Math.random()*50, -50);
+                scene.add(shape);
+                backgroundProps.push({ mesh: shape, type: 'geometry', floatSpeed: 0.2, posOffset: Math.random()*5 });
+            }
+        }
+
+        function createMinimalParticles() {
+            const geo = new THREE.SphereGeometry(0.25, 8, 8);
+            const mat = new THREE.MeshStandardMaterial({ color: 0x39ff14, emissive: 0x39ff14, emissiveIntensity: 2 });
+            const group = new THREE.Group();
+            for(let i=0; i<120; i++) {
+                const drop = new THREE.Mesh(geo, mat);
+                drop.position.set((Math.random()-0.5)*180, Math.random()*120, (Math.random()-0.5)*120);
+                group.add(drop);
+            }
+            scene.add(group);
+            particles = group;
         }
 
         function animate() {
             requestAnimationFrame(animate);
             const time = clock.getElapsedTime();
 
-            // Ciclo de cores (Alternando entre Verde e Laranja)
-            const hue = (Math.sin(time * 0.2) * 0.1 + 0.1); // Oscila na zona do verde/amarelo/laranja
-            
-            // Movimento de câmera flutuante (Estilo Glamour)
-            camera.position.y = 8 + Math.sin(time * 0.4) * 3;
-            camera.position.x = Math.cos(time * 0.3) * 6;
-            camera.lookAt(0, 5, 0);
+            // Background Pulsante
+            const bgHue = 0.06 + Math.sin(time * 0.15) * 0.03;
+            scene.background.setHSL(bgHue, 1, 0.45);
+            scene.fog.color.setHSL(bgHue, 1, 0.45);
 
-            // Animar Grid e Fluxo
-            grid.position.z = (time * 10) % 5;
-            
-            chromeShapes.forEach((obj, i) => {
-                obj.mesh.rotation.y += obj.rot;
-                obj.mesh.rotation.z += obj.rot * 0.3;
-                obj.mesh.position.y += Math.sin(time * obj.float + i) * 0.07;
-                
-                // Pulsar emissivo conforme a música/tempo
-                if(obj.mesh.material.emissiveIntensity !== undefined) {
-                    obj.mesh.material.emissiveIntensity = 0.5 + Math.sin(time * 2 + i) * 0.3;
+            // Câmera Cinematográfica
+            camera.position.x = Math.sin(time * 0.2) * 20;
+            camera.position.y = 15 + Math.cos(time * 0.3) * 8;
+            camera.lookAt(0, 15, 0);
+
+            // Animar Superfícies Líquidas (Chão e Teto)
+            liquidSurfaces.forEach((plane, pIdx) => {
+                const pos = plane.geometry.attributes.position;
+                for(let i=0; i < pos.count; i++) {
+                    const x = originalVertices[i*3];
+                    const y = originalVertices[i*3 + 1];
+                    const phase = pIdx === 0 ? time : -time; 
+                    const wave = Math.sin(x * 0.06 + phase * 2) * 2.5 + Math.cos(y * 0.06 + phase * 1.5) * 2.5;
+                    pos.array[i*3 + 2] = originalVertices[i*3 + 2] + wave;
                 }
+                pos.needsUpdate = true;
+                plane.material.map.offset.y -= 0.015;
             });
 
-            // Bolhas flutuantes em câmera lenta
-            bubbles.forEach((b, i) => {
-                b.position.y += 0.04;
-                b.position.x += Math.sin(time * 0.5 + i) * 0.03;
-                if(b.position.y > 55) b.position.y = -5;
+            // Animar Elementos do Cenário
+            backgroundProps.forEach(prop => {
+                prop.mesh.position.y += Math.sin(time * prop.floatSpeed + prop.posOffset) * 0.06;
+                prop.mesh.rotation.z += 0.008;
+                prop.mesh.lookAt(camera.position);
+            });
+
+            // Chuva de Slime Cristalino
+            particles.children.forEach(d => {
+                d.position.y -= 0.6;
+                if(d.position.y < -40) d.position.y = 80;
             });
 
             renderer.render(scene, camera);
