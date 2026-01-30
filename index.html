@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Felipe Canneli - LaChapelle Hyper-Pop</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            /* Degradê LaChapelle: Pink e Ciano vibrantes */
+            background: linear-gradient(45deg, #ff007f, #00d4ff, #00ff95);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+        }
+
+        /* Efeito Glow / Bloom Surrealista */
+        .bloom-overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background: radial-gradient(circle at center, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
+            mix-blend-mode: screen;
+            z-index: 2;
+        }
+
+        /* Filtro de saturação extrema e brilho */
+        .hyper-filter {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            backdrop-filter: saturate(1.8) contrast(1.2) brightness(1.1);
+            z-index: 5;
+        }
+
+        .vhs-lines {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(rgba(255, 255, 255, 0.1) 50%, transparent 50%);
+            background-size: 100% 4px;
+            opacity: 0.1;
+            z-index: 6;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="bg-canvas"></canvas>
+    <div class="bloom-overlay"></div>
+    <div class="hyper-filter"></div>
+    <div class="vhs-lines"></div>
+
+    <script>
+        let scene, camera, renderer, clock;
+        let grid, floor, particles;
+        const bubbles = [];
+        const chromeShapes = [];
+
+        function init() {
+            scene = new THREE.Scene();
+            
+            // Fog branca/pink para dar aquele ar de "estúdio fotográfico celestial"
+            scene.fog = new THREE.Fog(0xff00ff, 10, 60);
+
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 8, 25);
+
+            renderer = new THREE.WebGLRenderer({ 
+                canvas: document.getElementById('bg-canvas'), 
+                antialias: true,
+                alpha: true 
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            
+            // Iluminação estourada (High Key)
+            renderer.toneMapping = THREE.ReinhardToneMapping;
+            renderer.toneMappingExposure = 2.5; 
+
+            clock = new THREE.Clock();
+
+            // LUZES MULTICOLORIDAS E INTENSAS
+            const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+            scene.add(ambientLight);
+
+            const pinkLight = new THREE.PointLight(0xff00ff, 20, 100);
+            pinkLight.position.set(20, 20, 10);
+            scene.add(pinkLight);
+
+            const cyanLight = new THREE.PointLight(0x00ffff, 20, 100);
+            cyanLight.position.set(-20, 15, 10);
+            scene.add(cyanLight);
+
+            const yellowLight = new THREE.DirectionalLight(0xffff00, 1.5);
+            yellowLight.position.set(0, 50, 0);
+            scene.add(yellowLight);
+
+            createFloor();
+            createSurrealObjects();
+            createBubbles();
+
+            window.addEventListener('resize', onWindowResize);
+            animate();
+        }
+
+        function createFloor() {
+            // Grid Branco e Neon (Estética de revista de moda)
+            grid = new THREE.GridHelper(200, 40, 0xffffff, 0x00ffff);
+            grid.position.y = -0.5;
+            scene.add(grid);
+
+            // Chão de Látex/Plástico Rosa
+            const floorGeo = new THREE.PlaneGeometry(500, 500);
+            const floorMat = new THREE.MeshStandardMaterial({
+                color: 0xff00ff,
+                metalness: 0.8,
+                roughness: 0.05,
+                emissive: 0x330033
+            });
+            floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = -0.6;
+            scene.add(floor);
+        }
+
+        function createSurrealObjects() {
+            const geometries = [
+                new THREE.TorusKnotGeometry(3, 0.8, 200, 32),
+                new THREE.SphereGeometry(2, 64, 64),
+                new THREE.TorusGeometry(5, 0.3, 16, 100)
+            ];
+
+            // Material "Liquid Chrome" e "Candy Plastic"
+            const chromeMat = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                metalness: 1,
+                roughness: 0,
+                emissive: 0x222222
+            });
+
+            const plasticMat = new THREE.MeshStandardMaterial({
+                color: 0x00ffff,
+                metalness: 0.2,
+                roughness: 0,
+                emissive: 0x003333
+            });
+
+            for (let i = 0; i < 15; i++) {
+                const isChrome = Math.random() > 0.5;
+                const geo = geometries[Math.floor(Math.random() * geometries.length)];
+                const mesh = new THREE.Mesh(geo, isChrome ? chromeMat : plasticMat);
+                
+                mesh.position.set(
+                    (Math.random() - 0.5) * 80,
+                    Math.random() * 25 + 5,
+                    (Math.random() - 0.5) * 60 - 30
+                );
+                
+                mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+                mesh.scale.setScalar(1 + Math.random() * 3);
+                
+                scene.add(mesh);
+                chromeShapes.push({
+                    mesh: mesh,
+                    rot: (Math.random() - 0.5) * 0.02,
+                    float: 0.5 + Math.random()
+                });
+            }
+        }
+
+        function createBubbles() {
+            const geo = new THREE.SphereGeometry(0.5, 32, 32);
+            const mat = new THREE.MeshPhongMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.6,
+                shininess: 100
+            });
+
+            for(let i=0; i<60; i++) {
+                const bubble = new THREE.Mesh(geo, mat);
+                bubble.position.set(
+                    (Math.random() - 0.5) * 100,
+                    Math.random() * 50,
+                    (Math.random() - 0.5) * 100
+                );
+                bubble.scale.setScalar(Math.random() * 2);
+                scene.add(bubble);
+                bubbles.push(bubble);
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = clock.getElapsedTime();
+
+            // Ciclo de cores LaChapelle (Pink -> Ciano -> Amarelo)
+            const hue = (time * 0.1) % 1;
+            const dynamicColor = new THREE.Color().setHSL(hue, 0.9, 0.6);
+            
+            // Movimento de câmera flutuante e glamouroso
+            camera.position.y = 8 + Math.sin(time * 0.5) * 2;
+            camera.position.x = Math.sin(time * 0.3) * 5;
+            camera.lookAt(0, 5, 0);
+
+            // Animar Objetos e Grid
+            grid.position.z = (time * 8) % 5;
+            
+            chromeShapes.forEach((obj, i) => {
+                obj.mesh.rotation.y += obj.rot;
+                obj.mesh.rotation.x += obj.rot * 0.5;
+                obj.mesh.position.y += Math.sin(time * obj.float + i) * 0.05;
+                
+                if(!obj.mesh.material.metalness < 1) {
+                    obj.mesh.material.emissive.setHSL((hue + 0.5) % 1, 0.8, 0.2);
+                }
+            });
+
+            // Animar Bolhas Surrealistas
+            bubbles.forEach((b, i) => {
+                b.position.y += 0.05;
+                b.position.x += Math.sin(time + i) * 0.02;
+                if(b.position.y > 50) b.position.y = -5;
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
